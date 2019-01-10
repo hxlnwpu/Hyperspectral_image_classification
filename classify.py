@@ -138,22 +138,17 @@ def classify(datasetname,data_process_method=1,model_method=1):
     if datasetname=="Indian_pines_corrected":
         dataset=Indian_pines_corrected
         datalabel=Indian_pines_gt
-        row=145
-        col=145 
     elif datasetname=="PaviaU":
         dataset=PaviaU
         datalabel=PaviaU_gt
-        row=610
-        col=340
     elif datasetname=="Pavia":
         dataset=Pavia
         datalabel=Pavia_gt
-        row=1096
-        col=715
     else:
         print("输入参数错误，程序即将退出")
         return 
-   
+    row=datalabel.shape[0]
+    col=datalabel.shape[1]
     #数据预处理
     new_data_set_scaled,new_label_set,training_data,test_data,training_label,test_label,num_class=data_process(dataset,datalabel,method=data_process_method)
     #模型预测
@@ -173,14 +168,17 @@ def classify(datasetname,data_process_method=1,model_method=1):
     result=np.reshape(predict_label,(row,col))
     image = Image.fromarray(result)
     image.save(datasetname+"_predict.tif")
+    print("预测结果已保存为："+datasetname+"_predict.tif")
     sp.save_rgb(datasetname+"_predict.jpg",result,colors=sp.spy_colors)
-
+    print("预测效果可查看图片："+datasetname+"_predict.jpg")
+    print("预测结果展示如下：")
+    print(result)
     return result
 
 if __name__ == '__main__':
     classify("Indian_pines_corrected",data_process_method=1,model_method=1)
     #classify("Pavia",data_process_method=1,model_method=1)
-    classify("PaviaU",data_process_method=1,model_method=1)
+    #classify("PaviaU",data_process_method=1,model_method=1)
 
 
 
