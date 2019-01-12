@@ -67,33 +67,56 @@ def get_nozero_data(dataset,labelset):
 # data process
 def data_process(dataset,datalabel,test_rate=0.4,method=1):
     num_class=get_class_num(datalabel)[1]
-    if method==0:
+    if method==0:    #去掉所有0后降到二维再划分训练集和测试集
         new_data_set,new_label_set=get_nozero_data(dataset,datalabel) 
-    elif method==1:
+        #pca
+        pca=PCA(n_components='mle')
+        pca_data=pca.fit_transform(new_data_set)
+        #标准化
+        new_data_set_scaled=preprocessing.scale(pca_data)
+        #划分
+        training_data,test_data,training_label,test_label=train_test_split(new_data_set_scaled, new_label_set, test_size=test_rate, random_state=42)
+    elif method==1:   #降到二维后直接划分训练集和测试集
         new_data_set=np.reshape(dataset,(-1,dataset.shape[2]))
         new_label_set=np.reshape(datalabel,(-1,1))
+        #pca
+        pca=PCA(n_components='mle')
+        pca_data=pca.fit_transform(new_data_set)
+        #标准化
+        new_data_set_scaled=preprocessing.scale(pca_data)
+        #划分
+        training_data,test_data,training_label,test_label=train_test_split(new_data_set_scaled, new_label_set, test_size=test_rate, random_state=42)
+    elif method==2:   #用于CNN，数据不作处理，直接三维
+        new_data_set=dataset
+        new_label_set=datalabel
+        new_data_set_scaled=np.zeros((1,1))
+        training_data=np.zeros((1,1))  
+        test_data=np.zeros((1,1))  
+        training_label=np.zeros((1,1))  
+        test_label=np.zeros((1,1))  
     else:
         print("请选择正确的数据预处理方法，程序即将退出.....")
         return 
-    
-    #pca
-    pca=PCA(n_components='mle')
-    pca_data=pca.fit_transform(new_data_set)
-    #print(pca_data.shape)
-    #标准化
-    new_data_set_scaled=preprocessing.scale(pca_data)
-    #print(new_data_set_caled.shape)
-    #划分
-    training_data,test_data,training_label,test_label=train_test_split(new_data_set_scaled, new_label_set, test_size=test_rate, random_state=42)
-    print(training_data.shape,training_label.shape,test_data.shape,test_label.shape)
 
-    return new_data_set_scaled,new_label_set,training_data,test_data,training_label,test_label,num_class
+    print( new_data_set_scaled.shape,
+           new_data_set.shape,
+           new_label_set.shape,
+           training_data.shape,
+           test_data.shape,
+           training_label.shape,
+           test_label.shape,
+           num_class
+        )
+    return  new_data_set_scaled,new_data_set,new_label_set,training_data,test_data,training_label,test_label,num_class
 
 
     
 # set model
-def set_model(datasetname,new_data_set_scaled,new_label_set,training_data,test_data,training_label,test_label,num_class,method=1):
-    if method==1:   
+def set_model(datasetname,new_data_set_scaled,new_data_set,
+                new_label_set,training_data,test_data,
+                training_label,test_label,
+                num_class,method=0):
+    if method==0:   
         #设置参数
         y_train = keras.utils.to_categorical(training_label, num_classes=num_class)
         #y_test = keras.utils.to_categorical(test_label, num_classes=num_class)
@@ -120,7 +143,7 @@ def set_model(datasetname,new_data_set_scaled,new_label_set,training_data,test_d
         for i in range(classes.shape[0]):
             predict_label[i,0]=classes[i,:].argmax()
         #print(predict_label.shape  
-    elif method==2:
+    elif method==1:
         #y_train = keras.utils.to_categorical(training_label, num_classes=num_class)
         #y_test = keras.utils.to_categorical(test_label, num_classes=num_class)
         clf = svm.SVC(kernel='linear')
@@ -129,6 +152,7 @@ def set_model(datasetname,new_data_set_scaled,new_label_set,training_data,test_d
         predict_label=joblib.load(datasetname+"_model.m").predict(new_data_set_scaled)
     else:
         print("请选择正确的模型，程序即将退出.....")
+        return
     
     return predict_label
 
@@ -150,10 +174,9 @@ def classify(datasetname,data_process_method=1,model_method=1):
     row=datalabel.shape[0]
     col=datalabel.shape[1]
     #数据预处理
-    new_data_set_scaled,new_label_set,training_data,test_data,training_label,test_label,num_class=data_process(dataset,datalabel,method=data_process_method)
+    new_data_set_scaled,new_data_set,new_label_set,training_data,test_data,training_label,test_label,num_class=data_process(dataset,datalabel,method=data_process_method)
     #模型预测
-    predict_label=set_model(datasetname,new_data_set_scaled,new_label_set,training_data,test_data,training_label,test_label,num_class,method=model_method)
-    #模型评估
+    predict_label=set_model(datasetname,new_data_set_scaled,new_data_set,new_label_set,training_data,test_data,training_label,test_label,num_class,method=model_method)
     ##混淆矩阵
     cm=confusion_matrix(new_label_set, predict_label)
     print("混淆矩阵如下：")
@@ -176,9 +199,9 @@ def classify(datasetname,data_process_method=1,model_method=1):
     return result
 
 if __name__ == '__main__':
-    classify("Indian_pines_corrected",data_process_method=1,model_method=1)
-    #classify("Pavia",data_process_method=1,model_method=1)
-    #classify("PaviaU",data_process_method=1,model_method=1)
+    classify("Indian_pines_corrected",data_process_method=1,model_method=0)
+    #classify("Pavia",data_process_method=1,model_method=0)
+    #classify("PaviaU",data_process_method=1,model_method=0)
 
 
 
