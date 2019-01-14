@@ -12,23 +12,32 @@ from sklearn.externals import joblib
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import cohen_kappa_score
+from sklearn.metrics import average_precision_score
+from sklearn.metrics import classification_report
 import keras
 from keras.layers import Dense, Dropout, Activation,Conv2D,MaxPooling2D,Flatten
 from keras.models import Sequential
 from keras.optimizers import SGD
 from keras.models import load_model
+from keras.utils import plot_model
 
 #all data path
-Indian_pines_dataset=r".\Data\indianpines_ds_raw.hdr"   
+Indian_pines_dataset=r".\Data\indianpines_ds_raw.hdr"  
+Indian_pines_corrected_dataset=r".\Data\matData\Indian_pines_corrected"
 Indian_pines_gt_dataset=r".\Data\indianpines_ts.tif" 
+Indian_pines__corrected_gt_dataset=r".\Data\matData\Indian_pines_gt"
 Pavia_dataset=r".\Data\pavia_ds.hdr"   
 Pavia_gt_dataset=r".\Data\pavia_ts.tif"  
 
 #read all data to ndarry
 Indian_pines_gt=misc.imread(Indian_pines_gt_dataset)
 Indian_pines=sp.open_image(Indian_pines_dataset).load()
+Indian_pines_corrected=sio.loadmat(Indian_pines_corrected_dataset)['indian_pines_corrected']
+Indian_pines__corrected_gt=sio.loadmat(Indian_pines__corrected_gt_dataset)['indian_pines_gt']
 PaviaU_gt=misc.imread(Pavia_gt_dataset)
 PaviaU=sp.open_image(Pavia_dataset).load()
+Indian_modify_gt=sio.loadmat('.\Data\indian_modify_gt.mat')['indian_pines_gt']
+Pavia_modify_gt=sio.loadmat('.\Data\pavia_modify_gt.mat')['paviaU']
 
 #get classes num of label
 def get_class_num(dataset):
@@ -76,7 +85,7 @@ def create_patche(dataset, windowSize=5):
             patchIndex = patchIndex + 1
     return patches_data   #patches_data为四维数组
 # data process
-def data_process(dataset,datalabel,feature_rate=0.15,windowSize=5,test_rate=0.3,method=1):
+def data_process(dataset,datalabel,feature_rate=0.15,windowSize=5,test_rate=0.2,method=1):
     num_class=get_class_num(datalabel)[1]
     if method==0:    #去掉所有0后降到二维再划分训练集和测试集
         new_data_set,new_label_set=get_nozero_data(dataset,datalabel) 
@@ -118,14 +127,14 @@ def data_process(dataset,datalabel,feature_rate=0.15,windowSize=5,test_rate=0.3,
         print("请选择正确的数据预处理方法，程序即将退出.....")
         return 
 
-    print( new_data_set.shape,
-           new_label_set.shape,
-           training_data.shape,
-           test_data.shape,
-           training_label.shape,
-           test_label.shape,
-           num_class
-        )
+    # print( new_data_set.shape,
+    #        new_label_set.shape,
+    #        training_data.shape,
+    #        test_data.shape,
+    #        training_label.shape,
+    #        test_label.shape,
+    #        num_class
+    #     )
     return  scaled_data,new_data_set,new_label_set,training_data,test_data,training_label,test_label,num_class,feature_num
 
 
@@ -170,25 +179,26 @@ def set_model(datasetname,scaled_data,new_data_set,
         #整理数据
         training_data = np.reshape(training_data, (training_data.shape[0],training_data.shape[3], training_data.shape[1], training_data.shape[2]))
         y_train = keras.utils.to_categorical(training_label, num_classes=num_class)
-        #设置参数
-        input_shape= training_data[0].shape
-        C1 = 3*feature_num
-        model = Sequential()
-        model.add(Conv2D(C1, (3, 3), activation='relu', input_shape=input_shape))
-        model.add(Conv2D(3*C1, (3, 3), activation='relu'))
-        model.add(Dropout(0.25))
-        model.add(Flatten())
-        model.add(Dense(6*feature_num, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(Dense(num_class, activation='softmax'))
-        #sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
-        #训练模型
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-        model.fit(training_data, y_train, batch_size=32, epochs=20)
-        #保存模型
-        model.save(datasetname+"_model.h5")
+        # #设置参数
+        # input_shape= training_data[0].shape
+        # C1 = 3*feature_num
+        # model = Sequential()
+        # model.add(Conv2D(C1, (3, 3), activation='relu', input_shape=input_shape))
+        # model.add(Conv2D(3*C1, (3, 3), activation='relu'))
+        # model.add(Dropout(0.25))
+        # model.add(Flatten())
+        # model.add(Dense(6*feature_num, activation='relu'))
+        # model.add(Dropout(0.5))
+        # model.add(Dense(num_class, activation='softmax'))
+        # #sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
+        # #训练模型
+        # model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        # model.fit(training_data, y_train, batch_size=32, epochs=20)
+        # #保存模型
+        # model.save(datasetname+"_model.h5")
         #预测所有数据
         model = load_model(datasetname+"_model.h5") 
+        #plot_model(model, to_file='model.png', show_shapes=True)
         scaled_data = np.reshape(scaled_data, (scaled_data.shape[0],scaled_data.shape[3], scaled_data.shape[1], scaled_data.shape[2]))
         classes = model.predict(scaled_data, batch_size=32)
         predict_label=np.zeros((classes.shape[0],1))
@@ -197,9 +207,7 @@ def set_model(datasetname,scaled_data,new_data_set,
     else:
         print("请选择正确的模型，程序即将退出.....")
         return
-    
-    print("predict_label.shape is:")
-    print(predict_label.shape)
+
     return predict_label
 
 
@@ -208,12 +216,15 @@ def classify(datasetname,data_process_method=1,model_method=1):
     if datasetname=="Indian_pines":
         dataset=Indian_pines
         datalabel=Indian_pines_gt
+        score_label=np.reshape(Indian_modify_gt,(-1,1))
     elif datasetname=="PaviaU":
         dataset=PaviaU
         datalabel=PaviaU_gt
-    # elif datasetname=="Pavia":
-    #     dataset=Pavia
-    #     datalabel=Pavia_gt
+        score_label=np.reshape(Pavia_modify_gt,(-1,1))
+    elif datasetname=="Indian_pines_corrected":
+        dataset=Indian_pines_corrected
+        datalabel=Indian_pines__corrected_gt
+        score_label=np.reshape(Indian_modify_gt,(-1,1))
     else:
         print("输入参数错误，程序即将退出")
         return 
@@ -223,24 +234,36 @@ def classify(datasetname,data_process_method=1,model_method=1):
     scaled_data,new_data_set,new_label_set,training_data,test_data,training_label,test_label,num_class,feature_num=data_process(dataset,datalabel,method=data_process_method)
     #模型预测
     predict_label=set_model(datasetname,scaled_data,new_data_set,new_label_set,training_data,test_data,training_label,test_label,num_class,feature_num,method=model_method)
-    with open(datasetname+"_result.txt",'w',encoding='utf-8') as f:
-        ##混淆矩阵
-        cm=confusion_matrix(new_label_set, predict_label)
-        print("混淆矩阵如下：")
-        print(cm)
+    ##混淆矩阵
+    cm=confusion_matrix(score_label, predict_label)
+    print("混淆矩阵如下：")
+    print(cm)
+    cm=cm.astype(int)
+    np.savetxt(datasetname+"_result.txt",cm)
+    with open(datasetname+"_result.txt",'a',encoding='utf-8') as f:
+        f.write("********以上为混淆矩阵********"+"\n")
+        target_names = ['class 0', 'class 1', 'class 2','class 3', 'class 4', 'class 5', 
+                        'class 6', 'class 7', 'class 8', 'class 9', 'class 10', 'class 11', 
+                        'class 12', 'class 13', 'class 14', 'class 15', 'class 16'
+                       ]
+        classes_score=classification_report(score_label, predict_label, target_names=target_names)
+        f.write(classes_score)
         ##kappa
-        ck=cohen_kappa_score(new_label_set,predict_label)
-        print("kappa为："+str(ck))
-        f.write("kappa为："+str(ck)+'\n')
-        ##正确率
-        hit=accuracy_score(new_label_set,predict_label)
-        print("正确率为："+str(hit))
-        f.write("正确率为："+str(hit)+'\n')
+        ck=cohen_kappa_score(score_label,predict_label)
+        print("kappa  is："+str(ck))
+        f.write("kappa is："+str(ck)+'\n')
+        ##总体分类精度
+        OA=accuracy_score(score_label,predict_label)
+        print("OA is: "+str(OA))
+        f.write("OA is: "+str(OA)+'\n')
+        # ##平均分类精度
+        # AA=average_precision_score(score_label,predict_label)
+        # print("AA is:"+str(AA))
+        # f.write("AA is:"+str(AA)+'\n')
+        
     #绘图
     result=np.reshape(predict_label,(row,col))
     result=result.astype(int)
-    print("result.shape is :")
-    print(result.shape)
     image = Image.fromarray(result)
     image.save(datasetname+"_predict.tif")
     print("预测结果已保存为："+datasetname+"_predict.tif")
@@ -253,9 +276,9 @@ def classify(datasetname,data_process_method=1,model_method=1):
     return result
 
 if __name__ == '__main__':
-    #classify("Indian_pines",data_process_method=2,model_method=2)
-    #classify("Pavia",data_process_method=1,model_method=0)
-    classify("PaviaU",data_process_method=2,model_method=2)
+    classify("Indian_pines",data_process_method=1,model_method=1)
+    #classify("Indian_pines_corrected",data_process_method=2,model_method=2)
+    #classify("PaviaU",data_process_method=2,model_method=2)
 
 
 
