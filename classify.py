@@ -18,14 +18,11 @@ from keras.models import Sequential
 from keras.optimizers import SGD
 from keras.models import load_model
 
-
-
 #all data path
 Indian_pines_dataset=r".\Data\indianpines_ds_raw.hdr"   
 Indian_pines_gt_dataset=r".\Data\indianpines_ts.tif" 
 Pavia_dataset=r".\Data\pavia_ds.hdr"   
 Pavia_gt_dataset=r".\Data\pavia_ts.tif"  
-
 
 #read all data to ndarry
 Indian_pines_gt=misc.imread(Indian_pines_gt_dataset)
