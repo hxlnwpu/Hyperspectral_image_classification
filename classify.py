@@ -1,10 +1,10 @@
 from PIL import Image
 import spectral as sp
+from scipy import misc
 import scipy.io as sio
 import numpy as np
 from sklearn import svm
 from sklearn.model_selection import train_test_split
-from sklearn.neural_network import MLPClassifier
 from sklearn import metrics
 from sklearn import preprocessing
 from sklearn.decomposition import PCA
@@ -21,22 +21,17 @@ from keras.models import load_model
 
 
 #all data path
-Indian_pines_dataset=r".\Data\Indian_pines"   #145*145*220
-Indian_pines_corrected_dataset=r".\Data\Indian_pines_corrected"  #145*145*200  
-Indian_pines_gt_dataset=r".\Data\Indian_pines_gt" #145*145
-Pavia_dataset=r".\Data\Pavia"   #1096*715*102
-Pavia_gt_dataset=r".\Data\Pavia_gt"   #1096*715
-PaviaU_dataset=r".\Data\PaviaU"      #610*340*103
-PaviaU_gt_dataset=r".\Data\PaviaU_gt"   #610*340
+Indian_pines_dataset=r".\Data\indianpines_ds_raw.hdr"   
+Indian_pines_gt_dataset=r".\Data\indianpines_ts.tif" 
+Pavia_dataset=r".\Data\pavia_ds.hdr"   
+Pavia_gt_dataset=r".\Data\pavia_ts.tif"  
+
 
 #read all data to ndarry
-Indian_pines=sio.loadmat(Indian_pines_dataset)['indian_pines']
-Indian_pines_corrected=sio.loadmat(Indian_pines_corrected_dataset)['indian_pines_corrected']
-Indian_pines_gt=sio.loadmat(Indian_pines_gt_dataset)['indian_pines_gt']
-Pavia=sio.loadmat(Pavia_dataset)['pavia']
-Pavia_gt=sio.loadmat(Pavia_gt_dataset)['pavia_gt']
-PaviaU=sio.loadmat(PaviaU_dataset)['paviaU']
-PaviaU_gt=sio.loadmat(PaviaU_gt_dataset)['paviaU_gt']
+Indian_pines_gt=misc.imread(Indian_pines_gt_dataset)
+Indian_pines=sp.open_image(Indian_pines_dataset).load()
+PaviaU_gt=misc.imread(Pavia_gt_dataset)
+PaviaU=sp.open_image(Pavia_dataset).load()
 
 #get classes num of label
 def get_class_num(dataset):
@@ -189,10 +184,10 @@ def set_model(datasetname,scaled_data,new_data_set,
         model.add(Dense(6*feature_num, activation='relu'))
         model.add(Dropout(0.5))
         model.add(Dense(num_class, activation='softmax'))
-        sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
+        #sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
         #训练模型
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-        model.fit(training_data, y_train, batch_size=32, epochs=30)
+        model.fit(training_data, y_train, batch_size=32, epochs=20)
         #保存模型
         model.save(datasetname+"_model.h5")
         #预测所有数据
@@ -206,20 +201,22 @@ def set_model(datasetname,scaled_data,new_data_set,
         print("请选择正确的模型，程序即将退出.....")
         return
     
+    print("predict_label.shape is:")
+    print(predict_label.shape)
     return predict_label
 
 
 #分类
 def classify(datasetname,data_process_method=1,model_method=1):
-    if datasetname=="Indian_pines_corrected":
-        dataset=Indian_pines_corrected
+    if datasetname=="Indian_pines":
+        dataset=Indian_pines
         datalabel=Indian_pines_gt
     elif datasetname=="PaviaU":
         dataset=PaviaU
         datalabel=PaviaU_gt
-    elif datasetname=="Pavia":
-        dataset=Pavia
-        datalabel=Pavia_gt
+    # elif datasetname=="Pavia":
+    #     dataset=Pavia
+    #     datalabel=Pavia_gt
     else:
         print("输入参数错误，程序即将退出")
         return 
@@ -244,6 +241,9 @@ def classify(datasetname,data_process_method=1,model_method=1):
         f.write("正确率为："+str(hit)+'\n')
     #绘图
     result=np.reshape(predict_label,(row,col))
+    result=result.astype(int)
+    print("result.shape is :")
+    print(result.shape)
     image = Image.fromarray(result)
     image.save(datasetname+"_predict.tif")
     print("预测结果已保存为："+datasetname+"_predict.tif")
@@ -251,12 +251,14 @@ def classify(datasetname,data_process_method=1,model_method=1):
     print("预测效果可查看图片："+datasetname+"_predict.jpg")
     print("预测结果展示如下：")
     print(result)
+    print("实际标签如下：")
+    print(np.reshape(new_label_set,(row,col)))
     return result
 
 if __name__ == '__main__':
-    classify("Indian_pines_corrected",data_process_method=2,model_method=2)
+    #classify("Indian_pines",data_process_method=2,model_method=2)
     #classify("Pavia",data_process_method=1,model_method=0)
-    #classify("PaviaU",data_process_method=2,model_method=2)
+    classify("PaviaU",data_process_method=2,model_method=2)
 
 
 

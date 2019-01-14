@@ -1,0 +1,9 @@
+ENVI
+samples = 610
+lines   = 610
+bands   = 103
+header offset = 0
+file type = ENVI Standard
+data type = 2
+interleave = bsq
+byte order = 0
