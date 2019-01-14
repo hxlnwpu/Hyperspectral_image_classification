@@ -21,13 +21,13 @@ from keras.models import load_model
 
 
 #all data path
-Indian_pines_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\Indian_pines"   #145*145*220
-Indian_pines_corrected_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\Indian_pines_corrected"  #145*145*200  
-Indian_pines_gt_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\Indian_pines_gt" #145*145
-Pavia_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\Pavia"   #1096*715*102
-Pavia_gt_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\Pavia_gt"   #1096*715
-PaviaU_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\PaviaU"      #610*340*103
-PaviaU_gt_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\PaviaU_gt"   #610*340
+Indian_pines_dataset=r".\Data\Indian_pines"   #145*145*220
+Indian_pines_corrected_dataset=r".\Data\Indian_pines_corrected"  #145*145*200  
+Indian_pines_gt_dataset=r".\Data\Indian_pines_gt" #145*145
+Pavia_dataset=r".\Data\Pavia"   #1096*715*102
+Pavia_gt_dataset=r".\Data\Pavia_gt"   #1096*715
+PaviaU_dataset=r".\Data\PaviaU"      #610*340*103
+PaviaU_gt_dataset=r".\Data\PaviaU_gt"   #610*340
 
 #read all data to ndarry
 Indian_pines=sio.loadmat(Indian_pines_dataset)['indian_pines']
@@ -179,23 +179,23 @@ def set_model(datasetname,scaled_data,new_data_set,
         #整理数据
         training_data = np.reshape(training_data, (training_data.shape[0],training_data.shape[3], training_data.shape[1], training_data.shape[2]))
         y_train = keras.utils.to_categorical(training_label, num_classes=num_class)
-        #设置参数
-        input_shape= training_data[0].shape
-        C1 = 3*feature_num
-        model = Sequential()
-        model.add(Conv2D(C1, (3, 3), activation='relu', input_shape=input_shape))
-        model.add(Conv2D(3*C1, (3, 3), activation='relu'))
-        model.add(Dropout(0.25))
-        model.add(Flatten())
-        model.add(Dense(6*feature_num, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(Dense(num_class, activation='softmax'))
-        sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
-        #训练模型
-        model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
-        model.fit(training_data, y_train, batch_size=32, epochs=50)
-        #保存模型
-        model.save(datasetname+"_model.h5")
+        # #设置参数
+        # input_shape= training_data[0].shape
+        # C1 = 3*feature_num
+        # model = Sequential()
+        # model.add(Conv2D(C1, (3, 3), activation='relu', input_shape=input_shape))
+        # model.add(Conv2D(3*C1, (3, 3), activation='relu'))
+        # model.add(Dropout(0.25))
+        # model.add(Flatten())
+        # model.add(Dense(6*feature_num, activation='relu'))
+        # model.add(Dropout(0.5))
+        # model.add(Dense(num_class, activation='softmax'))
+        # sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
+        # #训练模型
+        # model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+        # model.fit(training_data, y_train, batch_size=32, epochs=50)
+        # #保存模型
+        # model.save(datasetname+"_model.h5")
         #预测所有数据
         model = load_model(datasetname+"_model.h5") 
         scaled_data = np.reshape(scaled_data, (scaled_data.shape[0],scaled_data.shape[3], scaled_data.shape[1], scaled_data.shape[2]))
@@ -230,21 +230,19 @@ def classify(datasetname,data_process_method=1,model_method=1):
     scaled_data,new_data_set,new_label_set,training_data,test_data,training_label,test_label,num_class,feature_num=data_process(dataset,datalabel,method=data_process_method)
     #模型预测
     predict_label=set_model(datasetname,scaled_data,new_data_set,new_label_set,training_data,test_data,training_label,test_label,num_class,feature_num,method=model_method)
-    with open("result.txt",'r',encoding='utf-8') as f:
+    with open(datasetname+"_result.txt",'w',encoding='utf-8') as f:
         ##混淆矩阵
         cm=confusion_matrix(new_label_set, predict_label)
         print("混淆矩阵如下：")
         print(cm)
-        f.write("混淆矩阵如下："+"\n")
-        f.write(cm)
         ##kappa
         ck=cohen_kappa_score(new_label_set,predict_label)
         print("kappa为："+str(ck))
-        f.write("kappa为："+str(ck))
+        f.write("kappa为："+str(ck)+'\n')
         ##正确率
         hit=accuracy_score(new_label_set,predict_label)
         print("正确率为："+str(hit))
-        f.write("正确率为："+str(hit))
+        f.write("正确率为："+str(hit)+'\n')
     #绘图
     result=np.reshape(predict_label,(row,col))
     image = Image.fromarray(result)
@@ -257,9 +255,9 @@ def classify(datasetname,data_process_method=1,model_method=1):
     return result
 
 if __name__ == '__main__':
-    #classify("Indian_pines_corrected",data_process_method=2,model_method=2)
+    classify("Indian_pines_corrected",data_process_method=2,model_method=2)
     #classify("Pavia",data_process_method=1,model_method=0)
-    classify("PaviaU",data_process_method=2,model_method=2)
+    #classify("PaviaU",data_process_method=2,model_method=2)
 
 
 
