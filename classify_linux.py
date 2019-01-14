@@ -21,13 +21,13 @@ from keras.models import load_model
 
 
 #all data path
-Indian_pines_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\Indian_pines"   #145*145*220
-Indian_pines_corrected_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\Indian_pines_corrected"  #145*145*200  
-Indian_pines_gt_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\Indian_pines_gt" #145*145
-Pavia_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\Pavia"   #1096*715*102
-Pavia_gt_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\Pavia_gt"   #1096*715
-PaviaU_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\PaviaU"      #610*340*103
-PaviaU_gt_dataset=r"C:\Workspace\ML\Hyperspectral_image_classification\Data\PaviaU_gt"   #610*340
+Indian_pines_dataset="/home/hxl/ML/Hyperspectral_image_classification/Data/Indian_pines"   #145*145*220
+Indian_pines_corrected_dataset="/home/hxl/ML/Hyperspectral_image_classification/Data/Indian_pines_corrected"  #145*145*200  
+Indian_pines_gt_dataset="/home/hxl/ML/Hyperspectral_image_classification/Data/Indian_pines_gt" #145*145
+Pavia_dataset="/home/hxl/ML/Hyperspectral_image_classification/Data/Pavia"   #1096*715*102
+Pavia_gt_dataset="/home/hxl/ML/Hyperspectral_image_classification/Data/Pavia_gt"   #1096*715
+PaviaU_dataset="/home/hxl/ML/Hyperspectral_image_classification/Data/PaviaU"      #610*340*103
+PaviaU_gt_dataset="/home/hxl/ML/Hyperspectral_image_classification/Data/PaviaU_gt"   #610*340
 
 #read all data to ndarry
 Indian_pines=sio.loadmat(Indian_pines_dataset)['indian_pines']
@@ -85,7 +85,7 @@ def create_patche(dataset, windowSize=5):
     return patches_data   #patches_data为四维数组
 
 # data process
-def data_process(dataset,datalabel,feature_rate=0.15,windowSize=5,test_rate=0.3,method=1):
+def data_process(dataset,datalabel,feature_rate=0.3,windowSize=5,test_rate=0.2,method=1):
     num_class=get_class_num(datalabel)[1]
     if method==0:    #去掉所有0后降到二维再划分训练集和测试集
         new_data_set,new_label_set=get_nozero_data(dataset,datalabel) 
@@ -257,7 +257,7 @@ def classify(datasetname,data_process_method=1,model_method=1):
     return result
 
 if __name__ == '__main__':
-    #classify("Indian_pines_corrected",data_process_method=2,model_method=2)
+    classify("Indian_pines_corrected",data_process_method=2,model_method=2)
     #classify("Pavia",data_process_method=1,model_method=0)
     classify("PaviaU",data_process_method=2,model_method=2)
 
