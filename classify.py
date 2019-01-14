@@ -83,7 +83,6 @@ def create_patche(dataset, windowSize=5):
             patches_data[patchIndex, :, :, :] = patch
             patchIndex = patchIndex + 1
     return patches_data   #patches_data为四维数组
-
 # data process
 def data_process(dataset,datalabel,feature_rate=0.15,windowSize=5,test_rate=0.3,method=1):
     num_class=get_class_num(datalabel)[1]
@@ -179,23 +178,23 @@ def set_model(datasetname,scaled_data,new_data_set,
         #整理数据
         training_data = np.reshape(training_data, (training_data.shape[0],training_data.shape[3], training_data.shape[1], training_data.shape[2]))
         y_train = keras.utils.to_categorical(training_label, num_classes=num_class)
-        # #设置参数
-        # input_shape= training_data[0].shape
-        # C1 = 3*feature_num
-        # model = Sequential()
-        # model.add(Conv2D(C1, (3, 3), activation='relu', input_shape=input_shape))
-        # model.add(Conv2D(3*C1, (3, 3), activation='relu'))
-        # model.add(Dropout(0.25))
-        # model.add(Flatten())
-        # model.add(Dense(6*feature_num, activation='relu'))
-        # model.add(Dropout(0.5))
-        # model.add(Dense(num_class, activation='softmax'))
-        # sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
-        # #训练模型
-        # model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
-        # model.fit(training_data, y_train, batch_size=32, epochs=50)
-        # #保存模型
-        # model.save(datasetname+"_model.h5")
+        #设置参数
+        input_shape= training_data[0].shape
+        C1 = 3*feature_num
+        model = Sequential()
+        model.add(Conv2D(C1, (3, 3), activation='relu', input_shape=input_shape))
+        model.add(Conv2D(3*C1, (3, 3), activation='relu'))
+        model.add(Dropout(0.25))
+        model.add(Flatten())
+        model.add(Dense(6*feature_num, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(num_class, activation='softmax'))
+        sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
+        #训练模型
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.fit(training_data, y_train, batch_size=32, epochs=30)
+        #保存模型
+        model.save(datasetname+"_model.h5")
         #预测所有数据
         model = load_model(datasetname+"_model.h5") 
         scaled_data = np.reshape(scaled_data, (scaled_data.shape[0],scaled_data.shape[3], scaled_data.shape[1], scaled_data.shape[2]))
