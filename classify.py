@@ -85,7 +85,7 @@ def create_patche(dataset, windowSize=5):
     return patches_data   #patches_data为四维数组
 
 # data process
-def data_process(dataset,datalabel,feature_rate=0.15,windowSize=5,test_rate=0.4,method=1):
+def data_process(dataset,datalabel,feature_rate=0.15,windowSize=5,test_rate=0.3,method=1):
     num_class=get_class_num(datalabel)[1]
     if method==0:    #去掉所有0后降到二维再划分训练集和测试集
         new_data_set,new_label_set=get_nozero_data(dataset,datalabel) 
@@ -193,7 +193,7 @@ def set_model(datasetname,scaled_data,new_data_set,
         sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
         #训练模型
         model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
-        model.fit(training_data, y_train, batch_size=32, epochs=30)
+        model.fit(training_data, y_train, batch_size=32, epochs=50)
         #保存模型
         model.save(datasetname+"_model.h5")
         #预测所有数据
@@ -252,9 +252,9 @@ def classify(datasetname,data_process_method=1,model_method=1):
     return result
 
 if __name__ == '__main__':
-    classify("Indian_pines_corrected",data_process_method=2,model_method=2)
+    #classify("Indian_pines_corrected",data_process_method=2,model_method=2)
     #classify("Pavia",data_process_method=1,model_method=0)
-    #classify("PaviaU",data_process_method=1,model_method=0)
+    classify("PaviaU",data_process_method=2,model_method=2)
 
 
 

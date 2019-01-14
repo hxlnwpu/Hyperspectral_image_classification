@@ -37,7 +37,6 @@ Pavia_gt=sio.loadmat(Pavia_gt_dataset)['pavia_gt']
 PaviaU=sio.loadmat(PaviaU_dataset)['paviaU']
 PaviaU_gt=sio.loadmat(PaviaU_gt_dataset)['paviaU_gt']
 
-#get classes num of label
 def get_class_num(dataset):
     dict_k = {}
     for i in range(dataset.shape[0]):
@@ -135,4 +134,6 @@ def data_process(dataset,datalabel,feature_rate=0.5,windowSize=5,test_rate=0.4,m
         )
     return  scaled_data,new_data_set,new_label_set,training_data,test_data,training_label,test_label,num_class
 
-data_process(Indian_pines_corrected,Indian_pines_gt,feature_rate=0.5,windowSize=5,test_rate=0.4,method=2)
+num_class=get_class_num(Indian_pines_gt)
+print(num_class[0])
+print(num_class[1])
