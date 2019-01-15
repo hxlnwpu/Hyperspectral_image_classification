@@ -283,6 +283,7 @@ def classify(datasetname, data_process_method=1, model_method=1):
                         ]
         classes_score = classification_report(
             score_label, predict_label, target_names=target_names)
+        print(classes_score)
         f.write(classes_score)
         ##kappa
         kappa = cohen_kappa_score(score_label, predict_label)
