@@ -103,7 +103,7 @@ def create_patche(dataset, labelset, windowSize=5, removeZero=True):
     return patches_data, patches_label  # patches_data为四维数组，patches_label为列向量
 
 # data process
-def data_process(dataset, labelset, feature_rate=0.5, windowSize=5, test_rate=0.4, method=1):
+def data_process(dataset, labelset, feature_rate=0.8, windowSize=5, test_rate=0.2, method=1):
     num_class = get_class_num(labelset)[1]
     if method == 0:  # 拍平->PCA->normalized->split
         new_data_set = np.reshape(dataset, (-1, dataset.shape[2]))
@@ -262,7 +262,7 @@ def classify(datasetname, data_process_method=1, model_method=1):
     row = labelset.shape[0]
     col = labelset.shape[1]
     # 数据预处理
-    new_data_set,training_data, test_data, training_label, test_label,feature_num,num_class=data_process(dataset, labelset, feature_rate=0.15, windowSize=5, test_rate=0.4, method=data_process_method)
+    new_data_set,training_data, test_data, training_label, test_label,feature_num,num_class=data_process(dataset, labelset,method=data_process_method)
     # 训练模型
     predict_label=set_model(datasetname, new_data_set,
                             training_data, test_data,
