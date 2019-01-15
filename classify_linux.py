@@ -15,29 +15,29 @@ from sklearn.metrics import cohen_kappa_score
 from sklearn.metrics import average_precision_score
 from sklearn.metrics import classification_report
 import keras
-from keras.layers import Dense, Dropout, Activation, Conv2D, MaxPooling2D, Flatten
+from keras.layers import Dense, Dropout, Activation,Conv2D,MaxPooling2D,Flatten
 from keras.models import Sequential
 from keras.optimizers import SGD
 from keras.models import load_model
 from keras.utils import plot_model
 
-# all data path
-Indian_pines_dataset = r".\Data\indianpines_ds_raw.hdr"
-Indian_pines_corrected_dataset = r".\Data\matData\Indian_pines_corrected"
-Indian_pines_gt_dataset = r".\Data\indianpines_ts.tif"
-Indian_pines__corrected_gt_dataset = r".\Data\matData\Indian_pines_gt"
-Pavia_dataset = r".\Data\pavia_ds.hdr"
-Pavia_gt_dataset = r".\Data\pavia_ts.tif"
+#all data path
+Indian_pines_dataset="Data/indianpines_ds_raw.hdr"  
+Indian_pines_corrected_dataset="Data/Indian_pines_corrected"
+Indian_pines_gt_dataset="Data/indianpines_ts.tif" 
+Indian_pines__corrected_gt_dataset="Data/Indian_pines_gt"
+Pavia_dataset="Data/pavia_ds.hdr"   
+Pavia_gt_dataset="Data/pavia_ts.tif"  
 
-# read all data to ndarry
-Indian_pines_gt = misc.imread(Indian_pines_gt_dataset)
-Indian_pines = sp.open_image(Indian_pines_dataset).load()
-Indian_pines_corrected = sio.loadmat(Indian_pines_corrected_dataset)['indian_pines_corrected']
-Indian_pines__corrected_gt = sio.loadmat(Indian_pines__corrected_gt_dataset)['indian_pines_gt']
-PaviaU_gt = misc.imread(Pavia_gt_dataset)
-PaviaU = sp.open_image(Pavia_dataset).load()
-Indian_modify_gt = sio.loadmat('.\Data\indian_modify_gt.mat')['indian_pines_gt']
-Pavia_modify_gt = sio.loadmat('.\Data\pavia_modify_gt.mat')['paviaU']
+#read all data to ndarry
+Indian_pines_gt=misc.imread(Indian_pines_gt_dataset)
+Indian_pines=sp.open_image(Indian_pines_dataset).load()
+Indian_pines_corrected=sio.loadmat(Indian_pines_corrected_dataset)['indian_pines_corrected']
+Indian_pines__corrected_gt=sio.loadmat(Indian_pines__corrected_gt_dataset)['indian_pines_gt']
+PaviaU_gt=misc.imread(Pavia_gt_dataset)
+PaviaU=sp.open_image(Pavia_dataset).load()
+Indian_modify_gt=sio.loadmat('indian_modify_gt.mat')['indian_pines_gt']
+Pavia_modify_gt=sio.loadmat('pavia_modify_gt.mat')['paviaU']
 
 # get classes num of label
 
@@ -230,7 +230,7 @@ def set_model(datasetname, scaled_data, new_data_set,
         # 训练模型
         model.compile(loss='categorical_crossentropy',
                       optimizer='adam', metrics=['accuracy'])
-        model.fit(training_data, y_train, batch_size=32, epochs=2)
+        model.fit(training_data, y_train, batch_size=32, epochs=20)
         # 保存模型
         #plot_model(model, to_file='model.png', show_shapes=True)
         model.save(datasetname+"_model.h5")
@@ -281,10 +281,10 @@ def classify(datasetname, data_process_method=1, model_method=1):
     all_data, all_label, scaled_data, new_data_set, new_label_set, training_data, test_data, training_label, test_label, num_class, feature_num = data_process(
         dataset, datalabel, method=data_process_method)
     # 训练模型
-    # set_model(datasetname, scaled_data, new_data_set,
-    #           new_label_set, training_data, test_data,
-    #           training_label, test_label,
-    #           num_class, feature_num, method=model_method)
+    set_model(datasetname, scaled_data, new_data_set,
+              new_label_set, training_data, test_data,
+              training_label, test_label,
+              num_class, feature_num, method=model_method)
     # 模型预测
 
     predict_label = model_predict(datasetname, all_data, all_label)
@@ -334,5 +334,7 @@ def classify(datasetname, data_process_method=1, model_method=1):
 
 if __name__ == '__main__':
     classify("Indian_pines", data_process_method=2, model_method=2)
-    # classify("Indian_pines_corrected",data_process_method=2,model_method=2)
-    # classify("PaviaU",data_process_method=2,model_method=2)
+    classify("Indian_pines_corrected",data_process_method=2,model_method=2)
+    classify("PaviaU",data_process_method=2,model_method=2)
+
+
