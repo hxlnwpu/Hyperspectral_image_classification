@@ -52,8 +52,6 @@ def get_class_num(dataset):
     return dict_k, len(dict_k)
 
 # get all nonzero sample and label
-
-
 def get_nozero_data(dataset, labelset):
     nozero_num = len(labelset.nonzero()[0])
     k = 0
@@ -66,10 +64,24 @@ def get_nozero_data(dataset, labelset):
                 new_label_set[k, -1] = labelset[i][j]
                 k = k+1
     return new_data_set, new_label_set
+def get_allzero_data(dataset, labelset):
+    a=np.reshape(labelset, (-1, 1))
+    zero_num=np.sum(a==0)
+    new_data_set = np.zeros((zero_num, dataset.shape[2]))
+    new_label_set = np.zeros((zero_num, 1))
+    zero_index=[]
+    k=0
+    for i in range(labelset.shape[0]):
+        for j in range(labelset.shape[1]):
+            if(labelset[i][j] == 0):
+                new_data_set[k, :] = dataset[i,j,:]
+                new_label_set[k, -1] = labelset[i][j]
+                zero_index.append(str(i)+','+str(j))
+                k = k+1
+    return new_data_set,new_label_set,zero_index
+
 
 # 扩展数据，便于划分patch
-
-
 def extend_dataset(dataset, windowSize=5):
     new_dataset = np.zeros(
         (dataset.shape[0] + windowSize-1, dataset.shape[1] + windowSize-1, dataset.shape[2]))
@@ -79,13 +91,10 @@ def extend_dataset(dataset, windowSize=5):
     return new_dataset
 
 # 创建patch：每一个patch都是一个windowSize*windowSize*特征向量长度的数组。原数据每一个元素分别成为patch中心,
-
-
 def create_patche(dataset, labelset, windowSize=5, removeZero=True):
     offset = int((windowSize - 1) / 2)
     new_dataset = extend_dataset(dataset, windowSize)
-    patches_data = np.zeros(
-        (dataset.shape[0] * dataset.shape[1], windowSize, windowSize, dataset.shape[2]))
+    patches_data = np.zeros((dataset.shape[0] * dataset.shape[1], windowSize, windowSize, dataset.shape[2]))
     patches_label = np.zeros((dataset.shape[0] * dataset.shape[1]))
     patchIndex = 0
     for row in range(offset, new_dataset.shape[0] - offset):
@@ -103,7 +112,7 @@ def create_patche(dataset, labelset, windowSize=5, removeZero=True):
     return patches_data, patches_label  # patches_data为四维数组，patches_label为列向量
 
 # data process
-def data_process(dataset, labelset, feature_rate=0.8, windowSize=5, test_rate=0.2, method=1):
+def data_process(dataset, labelset, feature_rate=0.15, windowSize=5, test_rate=0, method=1):
     num_class = get_class_num(labelset)[1]
     if method == 0:  # 拍平->PCA->normalized->split
         new_data_set = np.reshape(dataset, (-1, dataset.shape[2]))
@@ -117,22 +126,26 @@ def data_process(dataset, labelset, feature_rate=0.8, windowSize=5, test_rate=0.
         new_data_set= scaled_data
         # 划分
         training_data, test_data, training_label, test_label = train_test_split(new_data_set, new_label_set, test_size=test_rate, random_state=42)
-    elif method == 1:  #拍平->pca->normalized->升维->创建patch(不去0)
+    elif method == 1:  #拍平->过采样->pca->normalized->升维->创建patch(不去0)
         new_data_set = np.reshape(dataset, (-1, dataset.shape[2]))
-        new_label_set=labelset
+        print(new_data_set.shape)
+        #过采样
+        X_resampled_adasyn, y_resampled_adasyn = ADASYN().fit_sample(new_data_set, np.reshape(labelset, (-1, 1)))
+        print(X_resampled_adasyn.shape,y_resampled_adasyn.shape)
         # pca
         feature_num = int(new_data_set.shape[1]*feature_rate)
         pca = PCA(n_components=feature_num)
-        pca_data = pca.fit_transform(new_data_set)
+        pca_data = pca.fit_transform(X_resampled_adasyn)
         # 标准化
         scaled_data = preprocessing.scale(pca_data)
         #升维
-        new_data_set = np.reshape(scaled_data, (dataset.shape[0], dataset.shape[1], feature_num))
+        new_data_set = np.reshape(scaled_data, (X_resampled_adasyn.shape[0], X_resampled_adasyn.shape[1], feature_num))
+        new_label_set=np.reshape(y_resampled_adasyn,(X_resampled_adasyn.shape[0],X_resampled_adasyn.shape[1]))
         # 创建patch
         new_data_set, new_label_set = create_patche(new_data_set, new_label_set, windowSize=5,removeZero=False)
         #划分
-        training_data, test_data, training_label, test_label = train_test_split(new_data_set, new_label_set, test_size=test_rate, random_state=42)
-    elif method == 2:  #  #拍平->pca->normalized->升维->创建patch(不去0)
+        training_data, test_data, training_label, test_label = train_test_split(X_resampled_adasyn, y_resampled_adasyn, test_size=test_rate, random_state=42)
+    elif method == 2:  #  #拍平->pca->normalized->升维->创建patch(去0)
         new_data_set = np.reshape(dataset, (-1, dataset.shape[2]))
         new_label_set=labelset
         # pca
@@ -150,6 +163,9 @@ def data_process(dataset, labelset, feature_rate=0.8, windowSize=5, test_rate=0.
         nozero_dataset, nozero_labelset = create_patche(temp_dataset, temp_labelset, windowSize=5,removeZero=True)
         #划分
         training_data, test_data, training_label, test_label = train_test_split(nozero_dataset, nozero_labelset, test_size=test_rate, random_state=42)
+    elif method==4:   #去除标签为0的样本中的异常点
+        pass
+
     else:
         print("请选择正确的数据预处理方法，程序即将退出.....")
         return
@@ -196,6 +212,7 @@ def set_model(datasetname, new_data_set,
         predict_label = np.zeros((classes.shape[0], 1))
         for i in range(classes.shape[0]):
             predict_label[i, 0] = classes[i, :].argmax()
+        classes=np.zeros((2,2))
     elif method == 1:  #SVM
         #设置参数
         model = svm.SVC(kernel='linear')
@@ -205,44 +222,49 @@ def set_model(datasetname, new_data_set,
         joblib.dump(model, datasetname+"_model.m")
         # 预测所有数据
         predict_label = joblib.load(datasetname+"_model.m").predict(new_data_set)
+        classes=np.zeros((2,2))
     elif method == 2:  # CNN
         # 设置参数
         training_data = np.reshape(training_data, (training_data.shape[0], training_data.shape[3], training_data.shape[1], training_data.shape[2]))
         test_data = np.reshape(test_data, (test_data.shape[0], test_data.shape[3], test_data.shape[1], test_data.shape[2]))
-        y_train = keras.utils.to_categorical(training_label, num_classes=num_class)
-        y_test = keras.utils.to_categorical(test_label, num_classes=num_class)
+        y_train = keras.utils.to_categorical(training_label, num_classes=num_class+1)
+        y_test = keras.utils.to_categorical(test_label, num_classes=num_class+1)
         input_shape = training_data[0].shape
         C1 = 3*feature_num
-        model = Sequential()
-        model.add(Conv2D(C1, (3, 3), activation='relu', input_shape=input_shape))
-        model.add(Conv2D(3*C1, (3, 3), activation='relu'))
-        model.add(Dropout(0.25))
-        model.add(Flatten())
-        model.add(Dense(6*feature_num, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(Dense(num_class, activation='softmax'))
-        #sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
-        #训练模型
-        model.compile(loss='categorical_crossentropy',optimizer='adam', metrics=['accuracy'])
-        model.fit(training_data, y_train, batch_size=32, epochs=2)
-        #保存模型
-        #plot_model(model, to_file='model.png', show_shapes=True)
-        model.save(datasetname+"_model.h5")
-        #测试模型
-        score = model.evaluate(test_data, y_test, batch_size=32)
-        print("score is :"+str(score[1]))
+        # model = Sequential()
+        # model.add(Conv2D(C1, (3, 3), activation='relu', input_shape=input_shape))
+        # model.add(Conv2D(3*C1, (3, 3), activation='relu'))
+        # model.add(Dropout(0.25))
+        # model.add(Flatten())
+        # model.add(Dense(6*feature_num, activation='relu'))
+        # model.add(Dropout(0.5))
+        # model.add(Dense(num_class+1, activation='softmax'))
+        # #sgd = SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
+        # #训练模型
+        # model.compile(loss='categorical_crossentropy',optimizer='adam', metrics=['accuracy'])
+        # model.fit(training_data, y_train, batch_size=32, epochs=20)
+        # #保存模型
+        # #plot_model(model, to_file='model.png', show_shapes=True)
+        # model.save(datasetname+"_model.h5")
+        # #测试模型
+        # score = model.evaluate(test_data, y_test, batch_size=32)
+        # print("score is :"+str(score[1]))
         #预测所有数据
         model = load_model(datasetname+"_model.h5")
         new_data_set = np.reshape(new_data_set, (new_data_set.shape[0], new_data_set.shape[3], new_data_set.shape[1], new_data_set.shape[2]))
-        classes = model.predict(new_data_set, batch_size=32)
+        classes= model.predict(new_data_set,batch_size=32)
+        print(classes.shape)
         predict_label = np.zeros((classes.shape[0], 1))
-        print(predict_label.shape)
+        #print(predict_label.shape)
         for i in range(classes.shape[0]):
-            predict_label[i, 0] = classes[i, :].argmax()
+            # if  np.max(classes[i,:])<0.999:
+            #     predict_label[i, 0] = 0
+            # else:
+            predict_label[i, 0] = classes[i, :].argmax()+1            
     else:
         print("请选择正确的模型，程序即将退出.....")
         return
-    return predict_label
+    return predict_label,classes
 
 
 
@@ -264,7 +286,7 @@ def classify(datasetname, data_process_method=1, model_method=1):
     # 数据预处理
     new_data_set,training_data, test_data, training_label, test_label,feature_num,num_class=data_process(dataset, labelset,method=data_process_method)
     # 训练模型
-    predict_label=set_model(datasetname, new_data_set,
+    predict_label,classes=set_model(datasetname, new_data_set,
                             training_data, test_data,
                             training_label, test_label,
                             num_class, feature_num, method=model_method)
@@ -275,14 +297,15 @@ def classify(datasetname, data_process_method=1, model_method=1):
     print(cm)
     #cm = cm.astype(int)
     np.savetxt(datasetname+"_result.txt", cm)
+    if model_method==2:
+        np.savetxt(datasetname+"_classes.txt", classes)
+    target_names = ['class 00', 'class 01', 'class 02', 'class 03', 'class 04', 'class 05',
+                    'class 06', 'class 07', 'class 08', 'class 09', 'class 10', 'class 11',
+                    'class 12', 'class 13', 'class 14', 'class 15', 'class 16'
+                   ]
     with open(datasetname+"_result.txt", 'a', encoding='utf-8') as f:
-        f.write("********以上为混淆矩阵********"+"\n")
-        target_names = ['class 0', 'class 1', 'class 2', 'class 3', 'class 4', 'class 5',
-                        'class 6', 'class 7', 'class 8', 'class 9', 'class 10', 'class 11',
-                        'class 12', 'class 13', 'class 14', 'class 15', 'class 16'
-                        ]
-        classes_score = classification_report(
-            score_label, predict_label, target_names=target_names)
+        f.write("**************************以上为混淆矩阵*****************************"+"\n")
+        classes_score = classification_report(score_label, predict_label, target_names=target_names)
         print(classes_score)
         f.write(classes_score)
         ##kappa
@@ -297,7 +320,7 @@ def classify(datasetname, data_process_method=1, model_method=1):
         # AA=average_precision_score(score_label,predict_label)
         # print("AA is:"+str(AA))
         # f.write("AA is:"+str(AA)+'\n')
-    
+
     # 绘图
     result = np.reshape(predict_label, (row, col))
     #result = result.astype(int)
@@ -305,12 +328,16 @@ def classify(datasetname, data_process_method=1, model_method=1):
     image.save(datasetname+"_predict.tif")
     print("预测结果已保存为："+datasetname+"_predict.tif")
     sp.save_rgb(datasetname+"_predict.jpg", result, colors=sp.spy_colors)
+    if datasetname=="Indian_pines":
+        sp.save_rgb(datasetname+".jpg", Indian_modify_gt, colors=sp.spy_colors)
+    else:
+        sp.save_rgb(datasetname+".jpg", Pavia_modify_gt, colors=sp.spy_colors)
     print("预测效果可查看图片："+datasetname+"_predict.jpg")
     
     #print(result)
 
 
 if __name__ == '__main__':
-    classify("Indian_pines", data_process_method=0, model_method=1)
+    classify("Indian_pines", data_process_method=2, model_method=2)
     #classify("PaviaU",data_process_method=2,model_method=2)
 
